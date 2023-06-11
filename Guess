@@ -1,0 +1,88 @@
+import numpy as np
+
+#between N_min=1 and N_max=100 inclusive
+N_max = 100
+N_min = 1
+# variable to store the best choice
+result = {}
+
+
+# generate a uniform probability distribution between [N_min, N_max]
+
+
+p_arr = np.ones(N_max-N_min+1) # p_arr = np.random.rand(N_max-N_min+1)
+p_arr = p_arr/np.sum(p_arr)
+p_cumsum = np.cumsum(p_arr) # 0,99
+p = {key:p_arr[key-N_min] for key in range(N_min,N_max+1)}
+p_cum = {key:p_cumsum[key-N_min] for key in range(N_min,N_max+1)}  # 0,99
+p_cum[N_min-1] = 0
+
+# main dynamic programming part
+def solve(i,j):
+    '''
+    If given that this number is larger than i and smaller than j,
+    we iterate over all possible choices k in (i,j) and pick the best guess
+    p_cum is the cdf of probability distribution
+    p is the pdf of probability distribution
+    '''
+    if j-i==2:
+        return (i+1,1)
+    #total probability in interval[i,j]
+    temp_sum = p_cum[j-1]-p_cum[i]
+    #choose a number k =i+1
+    best = p[i+1] + (p_cum[j-1]-p_cum[i+1])*(result[(i+1,j)][1]+1)
+    best_index = i+1
+    #choose a number k between[i+2,j-2]
+    for k in range(i+2, j-1):
+        E = p[k] + (p_cum[k-1]-p_cum[i])*(result[(i,k)][1]+1)+(p_cum[j-1]-p_cum[k])*(result[(k,j)][1]+1)
+        if E<best:
+            best = E
+            best_index = k
+    #choose a number k =j-1    
+    E = p[j-1] + (p_cum[j-2]-p_cum[i])*(result[(i,j-1)][1]+1)
+    if E<best:
+        best = E
+        best_index = j-1
+        
+    return (best_index,best/temp_sum)
+
+
+count = 0
+Total_count = (N_max-N_min+1)*(N_max-N_min+2)//2
+print('Total is {:d}'.format(Total_count))
+
+
+# First loop:      i=0,1,...,99 j=i+2
+# Then             i=0,1,98 j=i+3
+#                    ...
+# j=i+diff         i=0, j=101
+
+for diff in range(2,N_max-N_min+3): #2... 101
+    for i in range(N_min-1, N_max+2-diff):#0,99   0,98,   ... 0,0
+        count += 1
+        if count%1000==0:
+            print(count)
+        j = i+diff
+        result[(i,j)] = solve(i,j)
+
+#print the result
+def print_solve():
+    rand = np.random.randint(N_min, N_max+1)
+    count = 0
+    lower = N_min-1
+    upper = N_max+1
+    while True:
+        guess = result[(lower, upper)][0]
+        count += 1
+        print('Guess {:d}: {:d}'.format(count, guess))
+        
+        if rand == guess:
+            print('Hit the target! Total attempts: {:d}'.format(count))
+            break
+        elif rand < guess:
+            upper = guess
+        else:
+            lower = guess
+    print('Expectation number of guess is {:f}'.format(result[(N_min-1, N_max+1)][1]))
+
+print_solve()
